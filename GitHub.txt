@@ -6,6 +6,6 @@ git init  # 프로젝트 폴더에서 git 초기화
 git add .  # 모든 파일 추가
 git commit -m "Initial commit"  # 커밋 메시지 작성
 git branch -M main  # 브랜치를 main으로 변경
-git remote add origin https://github.com/username/repository_name.git  # GitHub 저장소 URL 추가
+git remote add origin https://github.com/kimjongho017566/streamlit.git  # GitHub 저장소 URL 추가
 git push -u origin main  # 코드를 GitHub에 푸시
 여기서 username은 GitHub 사용자명, repository_name은 저장소 이름으로 바꿔야 합니다.
