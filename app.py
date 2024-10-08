@@ -21,7 +21,7 @@ def radiobox_function(selection):
 #다른 페이지
 
 # 사이드바 메뉴
-st.sidebar.title("메뉴")
+st.sidebar.title("사이드바입니다.")
 if st.sidebar.button("메뉴 1"):
     st.write("사이드바의 메뉴 1 버튼이 눌렸습니다!")
 
@@ -36,6 +36,7 @@ if st.sidebar.button("메뉴 5"):
 
 # 상단의 버튼들
 st.write("### ")
+st.write("### 이곳은 김종호의 공간입니다.")
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -64,4 +65,3 @@ data = {
 }
 st.table(data)
 
-print('2')

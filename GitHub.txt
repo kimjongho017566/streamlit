@@ -9,3 +9,18 @@ git branch -M main  # 브랜치를 main으로 변경
 git remote add origin https://github.com/kimjongho017566/streamlit.git  # GitHub 저장소 URL 추가
 git push -u origin main  # 코드를 GitHub에 푸시
 여기서 username은 GitHub 사용자명, repository_name은 저장소 이름으로 바꿔야 합니다.
+
+
+git push -u origin main
+
+4. Streamlit Cloud로 배포
+Streamlit Cloud를 사용하면 GitHub에 있는 앱을 쉽게 배포할 수 있습니다.
+
+Streamlit Cloud에 접속하여 계정으로 로그인합니다.
+로그인 후 "New app" 버튼을 클릭합니다.
+GitHub 저장소를 선택하고, 배포할 브랜치와 파일(app.py)을 선택합니다.
+"Deploy" 버튼을 클릭하면 자동으로 배포가 진행됩니다.
+앱이 배포되면 URL이 제공되며, 이를 통해 누구나 앱에 접근할 수 있습니다.
+
+app-kimjongho
+.streamlit.app
