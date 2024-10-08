@@ -25,7 +25,13 @@ st.sidebar.title("메뉴")
 if st.sidebar.button("메뉴 1"):
     st.write("사이드바의 메뉴 1 버튼이 눌렸습니다!")
 
-if st.sidebar.button("메뉴 2"):
+if st.sidebar.button("메뉴 3"):
+    st.write("사이드바의 메뉴 2 버튼이 눌렸습니다!")
+
+if st.sidebar.button("메뉴 4"):
+    st.write("사이드바의 메뉴 1 버튼이 눌렸습니다!")
+
+if st.sidebar.button("메뉴 5"):
     st.write("사이드바의 메뉴 2 버튼이 눌렸습니다!")
 
 # 상단의 버튼들
