@@ -1,0 +1,47 @@
+import xml.etree.ElementTree as ET
+import csv
+import pandas as pd
+
+# XML 파일 읽기
+tree = ET.parse('test.xml')  # XML 파일 경로 지정
+root = tree.getroot()
+
+# 재귀적으로 XML의 모든 요소와 데이터를 탐색
+def parse_element(element, parent_path=""):
+    data = {}
+    # 현재 태그 경로
+    current_path = f"{parent_path}/{element.tag}" if parent_path else element.tag
+    print(current_path)
+    if element.attrib:
+        data[current_path] = element.attrib  # 속성도 함께 저장
+
+    # 자식 요소가 없는 경우 텍스트를 저장
+    if element.text and element.text.strip():
+        data[current_path] = element.text.strip()
+    
+    # 자식 요소가 있는 경우 재귀적으로 처리
+    for child in element:
+        data.update(parse_element(child, current_path))
+    
+    return data
+
+# XML의 모든 데이터 파싱
+parsed_data = parse_element(root)
+
+# 데이터를 데이터프레임으로 변환
+df = pd.DataFrame(list(parsed_data.items()), columns=['Path', 'Value'])
+
+# 데이터프레임 출력
+print(df, "데이터프레임을 출력하였습니다.", sep='\n')
+
+# CSV로 저장 (key는 XML의 경로, value는 해당 태그의 값)
+with open('dynamic_output.csv', mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Path', 'Value'])  # 헤더 작성
+    
+    for path, value in parsed_data.items():
+        writer.writerow([path, value])
+
+
+print("XML 데이터를 동적으로 파싱하고 CSV로 저장했습니다.")
+
