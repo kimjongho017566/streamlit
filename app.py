@@ -1,7 +1,35 @@
 import streamlit as st
-from datetime import datetime, date
+from datetime import date, datetime
 import pandas as pd
+from io import BytesIO
 
+################초기 함수 및 변수 설정###############################
+
+# 엑셀 다운로드를 위한 함수
+def to_excel(df):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, index=False, sheet_name='Sheet1')
+    writer.close()
+    processed_data = output.getvalue()
+    return processed_data
+
+# EXCEL DATA 양식 설정하기
+excel_template = pd.DataFrame(columns=["EQP_ID", "계측완료시간", "정리할 DATA 선택(1개만)", "SPEC 설정"])
+excel_data = to_excel(excel_template)
+
+#엑셀 관리 dialog
+@st.dialog("엑셀 관리")
+def excel_dialog():
+    st.markdown("**Excel 파일로 Data Upload 및 Download 하기**")
+    st.download_button(label="엑셀 양식 다운로드", data=excel_data, file_name="template.xlsx", mime="application/vnd.ms-excel")
+    uploaded_file = st.file_uploader("**엑셀 파일 업로드**", type=["xlsx"])
+        
+    if uploaded_file:
+        st.session_state.uploaded_file = uploaded_file  # 파일 자체를 세션 상태에 저장
+        st.success("업로드된 파일이 저장되었습니다!")
+
+#######################################################
 # 경고메시지 제거 및 아이콘 및 페이지 이름 설정
 st.set_page_config(
     page_title="환영해요",  # 페이지 이름 설정
@@ -9,26 +37,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# 스타일 설정
-st.markdown("""
-    <style>
-    .main-title {
-        font-size:50px !important;
-        color: #000000; /* 검정색 */
-        text-align: center;
-        font-weight: bold;
-        font-family: 'Arial', sans-serif;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-st.markdown('<p class="main-title">🌟공간에 오신 것을 환영합니다 🌟</p>', unsafe_allow_html=True)
-st.markdown("[여기를 눌러 Manual로 이동하세요](https://github.com/)")
-
 # 초기 세션 상태 설정
 if "current_page" not in st.session_state:
     st.session_state.current_page = "데이터 검색"
     st.session_state.saved_data = pd.DataFrame()  # 저장된 데이터를 위한 빈 데이터프레임 초기화
+    st.session_state.uploaded_file = None  # 업로드된 파일 초기화
 
 # 사이드바에 버튼 추가
 st.sidebar.markdown("### 페이지 선택")
@@ -60,11 +73,15 @@ elif st.session_state.current_page == "데이터 검색":
     with col4:
         selected_date = st.date_input("**계측완료 날짜**", value=date.today())
 
-    _, _, col1 = st.columns([3, 0.4, 0.3])
+    _, _, col1, col2 = st.columns([3, 0.4, 0.3, 0.3])
 
     with col1:
-        search_button = st.button("SEARCH")
+        if st.button("엑셀 관리"):
+            excel_dialog()  # 다이얼로그를 여는 함수
 
+    with col2:
+        search_button = st.button("SEARCH")
+        
     st.markdown("---")
 
     if search_button:
@@ -81,7 +98,7 @@ elif st.session_state.current_page == "데이터 검색":
 
         st.session_state.filtered_data = filtered_data
 
-    if  "filtered_data" in st.session_state and not st.session_state.filtered_data.empty:
+    if "filtered_data" in st.session_state and not st.session_state.filtered_data.empty:
              
         st.write(f"필터링된 데이터 : {combo_menu}, {combo_line} , {combo_eqpid} , {selected_date} || 검색 시간 : {datetime.now()}")
 
@@ -103,27 +120,37 @@ elif st.session_state.current_page == "데이터 검색":
             hide_index=True,
         )    
 
-        _, _, col1 = st.columns([3, 0.4, 0.5])
-
-        with col1:
-            save_button = st.button("DATA 저장하기")
-
-    elif  "filtered_data" not in st.session_state or st.session_state.filtered_data.empty:
-        st.markdown("**DATA가 존재하지 않습니다**")
+    elif "filtered_data" not in st.session_state or st.session_state.filtered_data.empty:
+        st.markdown("**조회된 DATA가 존재하지 않습니다**")
         st.markdown("**다시 시도하거나, 담당자에게 문의 부탁드립니다.**")
 
-    
+    _, _, col1 = st.columns([3, 0.4, 0.5])
+
+    with col1:
+        save_button = st.button("DATA 저장하기")
+
     # 저장 버튼이 눌리면 "정리할 DATA 선택(1개만)" 컬럼에서 True로 체크된 데이터만 필터링하여 저장
     if 'save_button' in locals() and save_button:
-        selected_data = edited_data[edited_data["정리할 DATA 선택(1개만)"] == True]  # 체크된 데이터만 선택
-        if not selected_data.empty:
-            st.session_state.saved_data = pd.concat([st.session_state.saved_data, selected_data], ignore_index=True)
-            st.success("선택된 데이터가 저장되었습니다!")
-        else:
-            st.warning("선택된 데이터가 없습니다. 데이터를 선택 후 저장하세요.")
+        if 'edited_data' in locals():
+            selected_data = edited_data[edited_data["정리할 DATA 선택(1개만)"] == True]  # 체크된 데이터만 선택
+            if not selected_data.empty:
+                st.session_state.saved_data = pd.concat([st.session_state.saved_data, selected_data], ignore_index=True)
+                st.success("선택된 데이터가 저장되었습니다!")
+            elif st.session_state.uploaded_file:  # 업로드된 파일이 있으면, 파일 데이터 저장
+                uploaded_data = pd.read_excel(st.session_state.uploaded_file)
+                st.session_state.saved_data = pd.concat([st.session_state.saved_data, uploaded_data], ignore_index=True)
+                st.session_state.uploaded_file = None # 파일 저장하고 저장된 파일 초기화
+                st.success("업로드된 데이터가 저장되었습니다!")
+            else:
+                st.warning("선택된 데이터 및 업로드된 파일이 없습니다.")
+        elif st.session_state.uploaded_file:  # 업로드된 파일이 있으면, 파일 데이터 저장
+            uploaded_data = pd.read_excel(st.session_state.uploaded_file)
+            st.session_state.saved_data = pd.concat([st.session_state.saved_data, uploaded_data], ignore_index=True)
+            st.session_state.uploaded_file = None # 파일 저장하고 저장된 파일 초기화
+            st.success("업로드된 데이터가 저장되었습니다!")
 
     st.markdown("---")
-    st.write("현재 저장된 데이터:")
+    st.write("**현재 저장된 데이터**")
 
     # 저장된 데이터가 있는 경우에만 표시
     if "saved_data" in st.session_state and not st.session_state.saved_data.empty:
@@ -161,14 +188,11 @@ elif st.session_state.current_page == "데이터 검색":
         # 데이터 초기화 버튼
         if initial_button:
             st.session_state.saved_data = pd.DataFrame()  # 저장된 데이터 초기화
-            # st.rerun()
-            
+            st.rerun()
+
     elif "saved_data" not in st.session_state or st.session_state.saved_data.empty:
-        st.write("저장된 데이터가 없습니다.")
+        st.write("**저장된 데이터가 없습니다.**")
 
 elif st.session_state.current_page == "기타 정보":
     st.write("기타 정보 페이지에 오신 것을 환영합니다.")
     st.write("이곳에서 추가적인 정보를 확인할 수 있습니다.")
-
-print('********filtered_data******************',datetime.now(),st.session_state.filtered_data,sep='\n')
-print('********edited******************',datetime.now(),st.session_state.saved_data,sep='\n')
