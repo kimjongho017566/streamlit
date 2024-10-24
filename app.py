@@ -55,7 +55,7 @@ for i, col in enumerate(df.columns):
     values = df[col].values.flatten().tolist()
     values += values[:1]  # 시작점과 끝점 연결
 
-    # 데이터 값의 스케일을 0~1로 맞추기
+    # 데이터 값의 스케일을 0~1.2로 맞추기
     ax.set_ylim(0, 1.2)  # 축의 범위를 통일 (0에서 최대 값 1.2까지 설정)
     plt.yticks(np.arange(0.0, 1.2, 0.2))  # Y축 눈금을 0.2 간격으로 설정
 
@@ -84,35 +84,13 @@ for i, col in enumerate(df.columns):
     std_dev = df[col].std()  # 표준편차
     variance = df[col].var()  # 분산
 
-    # 차이, 표준편차 및 분산 출력
-    st.write(f"{col} 그래프에서 0도, 90도, 180도, 270도의 차이:", differences)
-    st.write(f"{col} 컬럼의 표준편차: {std_dev:.4f}, 분산: {variance:.4f}")
-
     # 현재 열에 차트 표시
     cols[i % columns_per_row].pyplot(fig)
+
+    # 차트 밑에 추가적인 내용 표시
+    cols[i % columns_per_row].write(f"{col} 컬럼의 표준편차: {std_dev:.4f}, 분산: {variance:.4f}")
+    cols[i % columns_per_row].write(f"{col} 그래프에서 0도, 90도, 180도, 270도의 차이: {differences}")
 
     # 3개의 차트가 그려질 때마다 새로운 열 생성
     if (i + 1) % columns_per_row == 0 and (i + 1) < len(df.columns):
         cols = st.columns(columns_per_row)
-
-
-# #탭 만들기
-# import streamlit as st
-
-# # 탭 생성
-# tab1, tab2, tab3 = st.tabs(["탭 1", "탭 2", "탭 3"])
-
-# # 첫 번째 탭 내용
-# with tab1:
-#     st.header("탭 1")
-#     st.write("이것은 첫 번째 탭의 내용입니다.")
-
-# # 두 번째 탭 내용
-# with tab2:
-#     st.header("탭 2")
-#     st.write("이것은 두 번째 탭의 내용입니다.")
-
-# # 세 번째 탭 내용
-# with tab3:
-#     st.header("탭 3")
-#     st.write("이것은 세 번째 탭의 내용입니다.")
