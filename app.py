@@ -3,19 +3,41 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from math import pi
+from io import BytesIO
+import base64
 
 # Streamlit에서 제목 표시
 st.title("방사형 차트 예시")
 
-# 데이터 프레임 생성 (사용자 데이터는 달라질 수 있음)
+# 데이터 프레임 생성
 data = {
     'S1': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.65, 0.54, 0.546, 0.54, 0.54],
-    'S2': [1.0, 0.7, 1.0,0.7,0.7,0.7,1.3,0.7,0.7,0.7,0.7,0.7],
+    'S2': [1.0, 0.7, 1.0, 0.7, 0.7, 0.7, 1.3, 0.7, 0.7, 0.7, 0.7, 0.7],
     'S3': [0.54, 0.45, 0.65, 0.75, 0.65, 0.65, 0.35, 0.75, 0.24, 0.78, 0.95, 0.54],
 }
 
 index = ['A28.1', 'A34.5', 'A58.5', 'A90.5', 'A105.5', 'A182.2', 'A195.7', 'A225.5', 'A278.2', 'A320.1', 'A356.1', 'A360.0']
 df = pd.DataFrame(data, index=index)
+
+# 조건부 스타일 지정 함수 (0.8 이상일 때 배경은 노란색, 글씨는 빨간색)
+def highlight_above_threshold(val):
+    color = 'color: red;' if val > 0.8 else ''
+    background = 'background-color: yellow;' if val > 0.8 else ''
+    return f'{color} {background}'
+
+# 데이터프레임 스타일 지정 + 컬럼 및 인덱스 배경색 설정
+df_style = df.style.applymap(highlight_above_threshold).set_table_styles(
+    [
+        {'selector': 'td', 'props': [('border', '1px solid black'), ('padding', '5px'), ('font-size', '14px')]},  # 셀 스타일
+        {'selector': 'th.col_heading', 'props': [('background-color', '#ADD8E6'), ('font-size', '15px'), ('text-align', 'center'), ('border', '1px solid black')]},  # 컬럼 헤더 배경색
+        {'selector': 'th.row_heading', 'props': [('background-color', '#FFA07A'), ('font-size', '15px'), ('text-align', 'center'), ('border', '1px solid black')]},  # 인덱스 배경색
+        {'selector': 'thead th.blank', 'props': [('background-color', '#E6E6FA'), ('border', '1px solid black')]},  # 빈칸(교차 헤더) 색상 변경
+        #{'selector': 'th', 'props': [('border', '1px solid black'), ('background-color', '#f2f2f2'), ('font-size', '15px'), ('text-align', 'center'), ('padding', '5px')]},  # 헤더 스타일(컬럼과,열 통합)
+        {'selector': 'table', 'props': [('border-collapse', 'collapse'), ('width', '100%')]}  # 셀 간격 제거 및 테이블 크기 조정
+    ]
+)
+
+
 
 # 변수 개수
 categories = df.index
@@ -31,8 +53,11 @@ cols = st.columns(columns_per_row)
 # 비율로 기준 값을 계산 (0도, 90도, 180도, 270도에 해당하는 비율)
 angle_ratios = [0, 0.25, 0.5, 0.75]
 
+# 그래프들을 저장할 리스트
+all_figs_base64 = []
+
 for i, col in enumerate(df.columns):
-    # 각 차트 크기 설정
+        # 각 차트 크기 설정
     fig = plt.figure(figsize=chart_size)
 
     # 방사형 그래프 각도 설정 (첫 번째 인덱스를 맨 위로)
@@ -94,3 +119,43 @@ for i, col in enumerate(df.columns):
     # 3개의 차트가 그려질 때마다 새로운 열 생성
     if (i + 1) % columns_per_row == 0 and (i + 1) < len(df.columns):
         cols = st.columns(columns_per_row)
+
+    ########################################################
+    # 차트를 메모리에 저장하고 Base64로 인코딩
+    buf = BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+    all_figs_base64.append(f'<img src="data:image/png;base64,{img_base64}" />')
+
+    # 3개의 차트가 그려질 때마다 새로운 열 생성
+    if (i + 1) % columns_per_row == 0 and (i + 1) < len(df.columns):
+        cols = st.columns(columns_per_row)
+
+st.markdown(df_style.to_html(),unsafe_allow_html=True)
+# Styler 객체로 변환된 데이터프레임을 HTML로 렌더링
+df_html = df_style.to_html()
+
+# HTML 코드와 Base64 인코딩된 이미지 및 테이블 포함
+html_content = ''.join(all_figs_base64) + df_html
+
+# 복사 버튼 추가
+copy_button_code = f"""
+<button id="copyButton">Copy HTML (including charts and table) to Clipboard</button>
+
+<script>
+    document.getElementById('copyButton').addEventListener('click', function() {{
+        const htmlContent = `{html_content}`;
+        const textarea = document.createElement('textarea');
+        textarea.value = htmlContent;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        alert('HTML content including charts and table copied to clipboard!');
+    }});
+</script>
+"""
+
+# Streamlit에 HTML 복사 버튼 추가
+st.components.v1.html(copy_button_code, height=100)
