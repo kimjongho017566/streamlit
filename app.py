@@ -1,52 +1,92 @@
-from ftplib import FTP
-import fnmatch
-import os
+import streamlit as st
+import matplotlib.pyplot as plt
+import pandas as pd
+import io
+import base64
+import streamlit.components.v1 as components
 
-ftp_host = ''
-ftp_user = ''
-ftp_pass = ''
+# 샘플 데이터 생성
+data = {
+    'X': [1, 2, 3, 4, 5],
+    'Y': [10, 20, 15, 25, 30],
+    'Z': [5, 15, 10, 20, 25]
+}
+df = pd.DataFrame(data)
 
-start_folder = '' # /로 시작하고 /로 끝나야함
+# Streamlit 제목
+st.title("Copy Chart and Table to Clipboard")
 
-# 여러 개의 패턴을 리스트로 지정
-target_path_patterns = ['/WIND/2024-10/MPCG02', '/WIND/2024-10/MPCG04']  # 여러 패턴 예시, 찾고자 하는 폴더들 #/로 시작하고 /없이 끝나야함
-target_file_pattern = '*.txt'  # 파일 이름 패턴 (예: *.txt 형식)
+# 1. Matplotlib 차트 생성
+fig, ax = plt.subplots()
+ax.plot(df['X'], df['Y'], label='Y Values', marker='o')
+ax.plot(df['X'], df['Z'], label='Z Values', marker='s')
+ax.set_title("Line Chart Example")
+ax.set_xlabel("X Axis")
+ax.set_ylabel("Y/Z Values")
+ax.legend()
 
-# FTP 연결 설정
-ftp = FTP(ftp_host)
-ftp.encoding = 'cp949'
-ftp.login(ftp_user, ftp_pass)
+# 차트를 Streamlit에 표시
+st.pyplot(fig)
 
-# 특정 폴더에서 파일을 찾는 재귀 함수
-def search_files(ftp, current_folder):
-    found_files = []  # 발견된 파일들을 저장할 리스트
-    try:
-        ftp.cwd(current_folder)
-        items = ftp.nlst()  # 현재 폴더의 모든 항목 목록 가져오기
+# 2. 차트를 Base64로 변환
+img_buffer = io.BytesIO()
+fig.savefig(img_buffer, format='png')
+img_buffer.seek(0)
+img_base64 = base64.b64encode(img_buffer.read()).decode()
 
-        for item in items:
-            item_path = f"{current_folder}/{item}"
-            
-            try:
-                ftp.cwd(item_path)  # 폴더인지 확인 후 이동 시도
-                found_files.extend(search_files(ftp, item_path))  # 하위 폴더 탐색 결과 추가
-                ftp.cwd("..")  # 상위 폴더로 이동
-            except:
-                # 최종 패턴 리스트에 있는 패턴 중 하나와 일치하는 폴더에 있는 파일만 확인
-                if any(current_folder.endswith(pattern) for pattern in target_path_patterns):
-                    print(f"현재 위치: {current_folder}")
-                    if fnmatch.fnmatch(item, target_file_pattern):  # 파일명 패턴이 일치하는지 확인
-                        print(f"파일 발견: {item_path}")
-                        found_files.append(item_path)  # 발견된 파일을 리스트에 추가
-    except Exception as e:
-        print(f"오류 발생: {e}")
-    
-    return found_files  # 최종적으로 발견된 파일 리스트 반환
+# 3. 데이터프레임을 HTML로 변환
+table_html = df.to_html(index=False, border=0)
 
-# 탐색 시작
-found_files = search_files(ftp, start_folder)
-print("\n발견된 파일 목록:")
-print(found_files)
+# 4. JavaScript와 버튼 생성 (Streamlit Components 사용)
+custom_js = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        button {{
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }}
+    </style>
+</head>
+<body>
+    <button onclick="copyToClipboard()">Copy to Clipboard</button>
 
-# FTP 연결 종료
-ftp.quit()
+    <script>
+        function copyToClipboard() {{
+            const imgBase64 = "data:image/png;base64,{img_base64}";
+            const tableHTML = `{table_html}`;
+            const fullContent = `<b>Image (Base64):</b><br><img src="${{imgBase64}}" alt="Chart"><br><br><b>Table (HTML):</b><br>${{tableHTML}}`;
+
+            const tempElement = document.createElement("div");
+            tempElement.innerHTML = fullContent;
+            document.body.appendChild(tempElement);
+
+            const range = document.createRange();
+            range.selectNode(tempElement);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+
+            try {{
+                document.execCommand("copy");
+                alert("Chart and Table copied to clipboard!");
+            }} catch (err) {{
+                alert("Failed to copy content. Please try again.");
+            }}
+
+            window.getSelection().removeAllRanges();
+            document.body.removeChild(tempElement);
+        }}
+    </script>
+</body>
+</html>
+"""
+
+# Streamlit Components로 HTML 삽입
+components.html(custom_js, height=300)
